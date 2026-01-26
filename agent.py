@@ -22,7 +22,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-from client import create_client
+from client import convert_model_for_vertex, create_client
 from progress import count_passing_tests, has_features, print_progress_summary, print_session_header
 from prompts import (
     copy_spec_to_project,
@@ -135,7 +135,13 @@ async def run_autonomous_agent(
     print("  AUTONOMOUS CODING AGENT")
     print("=" * 70)
     print(f"\nProject directory: {project_dir}")
-    print(f"Model: {model}")
+    # Convert and display the actual model that will be used
+    import os
+    vertex_model = convert_model_for_vertex(model)
+    if os.getenv("CLAUDE_CODE_USE_VERTEX") == "1" and vertex_model != model:
+        print(f"Model: {vertex_model} (Vertex AI format, from {model})")
+    else:
+        print(f"Model: {model}")
     if agent_type:
         print(f"Agent type: {agent_type}")
     if yolo_mode:
@@ -216,7 +222,10 @@ async def run_autonomous_agent(
             agent_id = f"feature-{feature_id}"
         else:
             agent_id = None
-        client = create_client(project_dir, model, yolo_mode=yolo_mode, agent_id=agent_id)
+
+        # Convert model format for Vertex AI if needed (@ instead of -)
+        vertex_model = convert_model_for_vertex(model)
+        client = create_client(project_dir, vertex_model, yolo_mode=yolo_mode, agent_id=agent_id)
 
         # Choose prompt based on agent type
         if agent_type == "initializer":
